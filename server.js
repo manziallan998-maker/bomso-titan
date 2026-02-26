@@ -82,7 +82,9 @@ function authenticate(req, res, next) {
     }
     next();
 }
-
+app.get('/test', (req, res) => {
+    res.json({ message: 'Server is alive!' });
+});
 // ==================== ROUTES ====================
 
 // Health check / root – serve the HTML interface
@@ -365,4 +367,5 @@ module.exports = app;
        // console.log(`🚀 BOMSO running locally at http://localhost:${PORT}`);
     //});
 //}
+
 

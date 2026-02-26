@@ -360,8 +360,9 @@ module.exports = app;
 
 // ==================== LOCAL DEVELOPMENT ONLY ====================
 // When running locally (not on Vercel), start the server
-if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`🚀 BOMSO running locally at http://localhost:${PORT}`);
-    });
-}
+//if (require.main === module) {
+   // app.listen(PORT, () => {
+       // console.log(`🚀 BOMSO running locally at http://localhost:${PORT}`);
+    //});
+//}
+

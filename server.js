@@ -1,7 +1,25 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { kv } = require('@vercel/kv');
+const { Redis } = require('@upstash/redis');
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
+// Helper to get data
+async function getData() {
+  const orgs = await redis.get('organizations') || [];
+  const reqs = await redis.get('requests') || [];
+  return { organizations: orgs, requests: reqs };
+}
+
+// Helper to save data
+async function saveData(organizations, requests) {
+  await redis.set('organizations', organizations);
+  await redis.set('requests', requests);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -218,3 +236,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+

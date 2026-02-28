@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOMSO · BILLAN ONLINE OFFICE</title>
+    <title>BOMSO TITAN · BILLAN OFFICE</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -12,7 +12,6 @@
             box-sizing: border-box;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-
         body {
             background-color: #0a0a0a;
             color: #eee;
@@ -22,7 +21,6 @@
             justify-content: center;
             padding: 20px;
         }
-
         #app {
             width: 1400px;
             max-width: 100%;
@@ -35,7 +33,6 @@
             flex-direction: column;
             min-height: 800px;
         }
-
         .login-container {
             flex: 1;
             display: flex;
@@ -100,7 +97,6 @@
             margin-top: 15px;
             text-align: center;
         }
-
         .admin-layout {
             display: none;
             flex: 1;
@@ -189,7 +185,6 @@
         .main-header button:hover {
             background: #444;
         }
-
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -212,13 +207,11 @@
             font-size: 32px;
             font-weight: bold;
         }
-
         .section-title {
             color: #00ff88;
             margin: 30px 0 20px;
             font-size: 22px;
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
@@ -321,23 +314,23 @@
 </head>
 <body>
     <div id="app">
-        <!-- Login view -->
+        <!-- LOGIN VIEW -->
         <div id="loginView" class="login-container">
             <div class="login-box">
-                <h1>BOMSO</h1>
-                <div class="sub">BILLAN ONLINE OFFICE</div>
+                <h1>BOMSO TITAN</h1>
+                <div class="sub">BILLAN OFFICE · DARK CONTROL</div>
                 <input type="password" id="loginPassword" placeholder="Admin Password">
                 <button onclick="login()">ENTER OFFICE</button>
                 <div id="loginError" class="error"></div>
             </div>
         </div>
 
-        <!-- Admin layout -->
+        <!-- ADMIN LAYOUT -->
         <div id="adminView" class="admin-layout" style="display: none;">
             <div class="sidebar">
                 <div class="logo">
                     <h2>BOMSO</h2>
-                    <p>BILLAN OFFICE</p>
+                    <p>TITAN OFFICE</p>
                 </div>
                 <nav>
                     <ul>
@@ -349,19 +342,19 @@
                 </nav>
             </div>
             <div class="main-content" id="mainContent">
-                <!-- dynamic content -->
+                <!-- Dynamic content goes here -->
             </div>
         </div>
     </div>
 
     <script>
         // ==================== CONFIG ====================
-        const API_BASE = window.location.origin; // assumes API is on same origin
+        const API_BASE = ''; // empty means same origin
 
         // ==================== STATE ====================
-        let authToken = localStorage.getItem('bomso_token'); // simple token after login
+        let authToken = localStorage.getItem('bomso_token');
         let organizations = [];
-        let pendingRequests = [];
+        let allRequests = [];
         let currentView = 'dashboard';
 
         // ==================== API HELPERS ====================
@@ -370,7 +363,7 @@
                 ...options,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': authToken ? `Bearer ${authToken}` : '',
+                    ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
                     ...options.headers
                 }
             });
@@ -411,15 +404,14 @@
             try {
                 const [orgsRes, reqsRes] = await Promise.all([
                     apiFetch('/api/organizations'),
-                    apiFetch('/api/requests?status=pending')
+                    apiFetch('/api/requests')
                 ]);
                 organizations = orgsRes;
-                pendingRequests = reqsRes;
+                allRequests = reqsRes;
             } catch (err) {
                 console.error('Failed to load data', err);
-                // fallback to empty
                 organizations = [];
-                pendingRequests = [];
+                allRequests = [];
             }
             renderView(currentView);
         }
@@ -443,12 +435,9 @@
         function renderDashboard(container) {
             const activeOrgs = organizations.filter(o => o.subscription?.active).length;
             const totalOrgs = organizations.length;
-            const pendingReqs = pendingRequests.length;
+            const pendingReqs = allRequests.filter(r => r.status === 'pending').length;
             const revenue = organizations.reduce((sum, o) => {
-                if (o.subscription?.tier && o.subscription.tier !== 'trial') {
-                    // rough estimate: assume each paid subscription contributes 100k
-                    return sum + 100;
-                }
+                if (o.subscription?.tier && o.subscription.tier !== 'trial') return sum + 100; // placeholder
                 return sum;
             }, 0);
             container.innerHTML = `
@@ -469,10 +458,10 @@
                 <table>
                     <thead><tr><th>Org</th><th>Action</th><th>Time</th></tr></thead>
                     <tbody>
-                        ${pendingRequests.slice(0,5).map(req => `
+                        ${allRequests.slice(0,5).map(req => `
                             <tr><td>${req.orgName}</td><td>Payment request (${req.selectedTier}m)</td><td>${new Date(req.timestamp).toLocaleString()}</td></tr>
                         `).join('')}
-                        ${pendingRequests.length === 0 ? '<tr><td colspan="3">No recent activity</td></tr>' : ''}
+                        ${allRequests.length === 0 ? '<tr><td colspan="3">No recent activity</td></tr>' : ''}
                     </tbody>
                 </table>
             `;
@@ -528,49 +517,44 @@
         }
 
         function renderRequests(container) {
-            // we need all requests, not just pending
-            apiFetch('/api/requests').then(allReqs => {
-                const pending = allReqs.filter(r => r.status === 'pending');
-                const approved = allReqs.filter(r => r.status === 'approved');
-                const rejected = allReqs.filter(r => r.status === 'rejected');
-                container.innerHTML = `
-                    <div class="main-header">
-                        <h1>Payment Requests</h1>
-                        <div class="user-info">
-                            <span>Admin</span>
-                            <button onclick="logout()">Logout</button>
-                        </div>
+            const pending = allRequests.filter(r => r.status === 'pending');
+            const approved = allRequests.filter(r => r.status === 'approved');
+            const rejected = allRequests.filter(r => r.status === 'rejected');
+            container.innerHTML = `
+                <div class="main-header">
+                    <h1>Payment Requests</h1>
+                    <div class="user-info">
+                        <span>Admin</span>
+                        <button onclick="logout()">Logout</button>
                     </div>
-                    <h2 class="section-title">Pending (${pending.length})</h2>
-                    <table>
-                        <thead><tr><th>Org</th><th>Owner</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Time</th><th>Actions</th></tr></thead>
-                        <tbody>
-                            ${pending.map(req => `
-                                <tr>
-                                    <td>${req.orgName} (${req.orgCode})</td>
-                                    <td>${req.owner}</td>
-                                    <td>${req.phone}</td>
-                                    <td>${req.selectedTier === 0 ? 'Free Trial' : req.selectedTier+' months'}</td>
-                                    <td>${req.selectedPrice?.toLocaleString() || 0} RWF</td>
-                                    <td>${new Date(req.timestamp).toLocaleString()}</td>
-                                    <td>
-                                        <button class="approve" onclick="approveRequest('${req.id}')">Approve</button>
-                                        <button class="reject" onclick="rejectRequest('${req.id}')">Reject</button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                            ${pending.length === 0 ? '<tr><td colspan="7">No pending requests</td></tr>' : ''}
-                        </tbody>
-                    </table>
-                    <h2 class="section-title">Approved (${approved.length})</h2>
-                    <table><thead><tr><th>Org</th><th>Plan</th><th>Approved Time</th></tr></thead><tbody>
-                        ${approved.map(req => `<tr><td>${req.orgName}</td><td>${req.selectedTier}m</td><td>${new Date(req.approvedAt).toLocaleString()}</td></tr>`).join('')}
-                        ${approved.length===0?'<tr><td colspan="3">None</td></tr>':''}
-                    </tbody></table>
-                `;
-            }).catch(() => {
-                container.innerHTML = '<p>Error loading requests</p>';
-            });
+                </div>
+                <h2 class="section-title">Pending (${pending.length})</h2>
+                <table>
+                    <thead><tr><th>Org</th><th>Owner</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Time</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        ${pending.map(req => `
+                            <tr>
+                                <td>${req.orgName} (${req.orgCode})</td>
+                                <td>${req.owner}</td>
+                                <td>${req.phone}</td>
+                                <td>${req.selectedTier === 0 ? 'Free Trial' : req.selectedTier+' months'}</td>
+                                <td>${req.selectedPrice?.toLocaleString() || 0} RWF</td>
+                                <td>${new Date(req.timestamp).toLocaleString()}</td>
+                                <td>
+                                    <button class="approve" onclick="approveRequest('${req.id}')">Approve</button>
+                                    <button class="reject" onclick="rejectRequest('${req.id}')">Reject</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                        ${pending.length === 0 ? '<tr><td colspan="7">No pending requests</td></tr>' : ''}
+                    </tbody>
+                </table>
+                <h2 class="section-title">Approved (${approved.length})</h2>
+                <table><thead><tr><th>Org</th><th>Plan</th><th>Approved Time</th></tr></thead><tbody>
+                    ${approved.map(req => `<tr><td>${req.orgName}</td><td>${req.selectedTier}m</td><td>${new Date(req.approvedAt).toLocaleString()}</td></tr>`).join('')}
+                    ${approved.length===0?'<tr><td colspan="3">None</td></tr>':''}
+                </tbody></table>
+            `;
         }
 
         function renderSettings(container) {
@@ -622,7 +606,6 @@
                 });
                 alert('Organization added');
                 document.getElementById('addOrgForm').style.display = 'none';
-                // clear form
                 document.getElementById('newOrgCode').value = '';
                 document.getElementById('newOrgName').value = '';
                 document.getElementById('newOwner').value = '';
@@ -640,8 +623,6 @@
                 await apiFetch(`/api/requests/${requestId}/approve`, { method: 'POST' });
                 alert('Request approved');
                 loadDashboardData();
-                // also refresh requests view if open
-                if (currentView === 'requests') renderView('requests');
             } catch (err) {
                 alert('Error: ' + err.message);
             }
@@ -652,7 +633,6 @@
                 await apiFetch(`/api/requests/${requestId}/reject`, { method: 'POST' });
                 alert('Request rejected');
                 loadDashboardData();
-                if (currentView === 'requests') renderView('requests');
             } catch (err) {
                 alert('Error: ' + err.message);
             }
@@ -698,7 +678,7 @@
         };
 
         window.exportData = function() {
-            window.location.href = API_BASE + '/api/export';
+            window.location.href = '/api/export';
         };
 
         window.importData = function() {
@@ -711,7 +691,7 @@
             const formData = new FormData();
             formData.append('file', file);
             try {
-                const res = await fetch(API_BASE + '/api/import', {
+                const res = await fetch('/api/import', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${authToken}` },
                     body: formData
@@ -724,12 +704,11 @@
             }
         };
 
-        // ==================== INIT ====================
+        // ==================== AUTO-LOGIN ====================
         if (authToken) {
-            // try to auto-login
             (async () => {
                 try {
-                    await apiFetch('/api/verify'); // simple endpoint to check token
+                    await apiFetch('/api/verify');
                     document.getElementById('loginView').style.display = 'none';
                     document.getElementById('adminView').style.display = 'flex';
                     loadDashboardData();
